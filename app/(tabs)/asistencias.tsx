@@ -33,6 +33,7 @@ export default function Asistencias() {
     searchStudentByCode,
     registerAttendance,
     getUserCourses,
+    getStudentAttendances,
     isLoading
   } = useSupabaseData();
   
@@ -47,13 +48,15 @@ export default function Asistencias() {
   
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('2025-I'); // Establecer semestre por defecto
   const [courses, setCourses] = useState([]);
   const [professorCourses, setProfessorCourses] = useState([]);
+  const [attendances, setAttendances] = useState([]);
   const semesters = getSemesters();
   
   React.useEffect(() => {
-    if (user) {
+    if (user && selectedSemester) {
+      console.log('useEffect triggered - User:', user.id, 'Semester:', selectedSemester); // Debug
       loadData();
     }
   }, [user, selectedSemester]);
@@ -63,14 +66,45 @@ export default function Asistencias() {
 
     try {
       if (user.rol === 'estudiante') {
+        console.log('Loading student data for semester:', selectedSemester); // Debug
         const coursesData = await getUserCourses(user.id, selectedSemester);
+        console.log('Courses data:', coursesData); // Debug
         setCourses(coursesData);
+        
+        // Cargar asistencias para todos los cursos del estudiante
+        const attendancesData = await getStudentAttendances(user.id, selectedSemester);
+        console.log('Attendances data:', attendancesData); // Debug
+        setAttendances(attendancesData);
       } else if (user.rol === 'profesor') {
         const coursesData = await getProfessorCourses(user.id, form.semestre);
         setProfessorCourses(coursesData);
       }
     } catch (error) {
       console.error('Error loading attendance data:', error);
+    }
+  };
+
+  const getCourseAttendances = (courseCode: string) => {
+    console.log('Getting attendances for course:', courseCode); // Debug
+    console.log('All attendances:', attendances); // Debug
+    const filtered = attendances.filter(att => {
+      console.log('Comparing:', att.codigo_curso, 'with', courseCode); // Debug
+      return att.codigo_curso === courseCode;
+    });
+    console.log('Filtered attendances:', filtered); // Debug
+    return filtered;
+  };
+
+  const getAttendanceIcon = (estado: string) => {
+    switch (estado) {
+      case 'Presente':
+        return <CheckCircle size={16} color="#228B22" />;
+      case 'Tardanza':
+        return <Clock size={16} color="#DAA520" />;
+      case 'Ausente':
+        return <XCircle size={16} color="#DC143C" />;
+      default:
+        return null;
     }
   };
 
@@ -126,7 +160,23 @@ export default function Asistencias() {
                       Código: {course.cursos?.codigo || course.codigo_curso} - Sección {course.nombre}
                     </Text>
                     <Text style={styles.professorInfo}>
-                      Prof. {course.profesores?.usuarios?.nombres} {course.profesores?.usuarios?.apellidos}
+                      {(() => {
+                        // Debug: mostrar toda la estructura del course
+                        console.log('Course structure:', JSON.stringify(course, null, 2));
+                        
+                        // Intentar diferentes estructuras para encontrar el profesor
+                        const profesor = course.profesores?.usuarios || 
+                                       course.profesor?.usuarios || 
+                                       course.secciones?.profesores?.usuarios ||
+                                       course.usuarios;
+                        
+                        if (profesor) {
+                          return `Prof. ${profesor.nombres || ''} ${profesor.apellidos || ''}`.trim();
+                        }
+                        
+                        // Si no hay profesor en las estructuras esperadas, mostrar toda la info disponible
+                        return 'Prof. No asignado';
+                      })()}
                     </Text>
                     <Text style={styles.scheduleInfo}>
                       {course.horario || 'Horario por definir'}
@@ -135,26 +185,114 @@ export default function Asistencias() {
                 </View>
                 
                 <View style={styles.attendanceInfo}>
-                  <Text style={styles.attendanceTitle}>Estado de Asistencias</Text>
-                  <Text style={styles.attendanceNote}>
-                    Las asistencias son registradas por el profesor durante cada clase.
-                    Consulta regularmente para estar al tanto de tu registro.
-                  </Text>
+                  <Text style={styles.attendanceTitle}>Registro de Asistencias</Text>
                   
-                  <View style={styles.legendContainer}>
-                    <View style={styles.legendItem}>
-                      <CheckCircle size={16} color="#228B22" />
-                      <Text style={styles.legendText}>Presente</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <Clock size={16} color="#DAA520" />
-                      <Text style={styles.legendText}>Tardanza</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <XCircle size={16} color="#DC143C" />
-                      <Text style={styles.legendText}>Ausente</Text>
-                    </View>
-                  </View>
+                  {(() => {
+                    const courseCode = course.cursos?.codigo || course.codigo_curso;
+                    console.log('Processing course:', courseCode); // Debug
+                    const courseAttendances = getCourseAttendances(courseCode);
+                    console.log('Course attendances found:', courseAttendances.length); // Debug
+                    
+                    if (courseAttendances.length === 0) {
+                      return (
+                        <View>
+                          <Text style={styles.attendanceNote}>
+                            No hay registros de asistencia para este curso.
+                          </Text>
+                          <Text style={styles.attendanceNote}>
+                            Debug - Buscando asistencias para código: {courseCode}
+                          </Text>
+                          <Text style={styles.attendanceNote}>
+                            Total asistencias cargadas: {attendances.length}
+                          </Text>
+                        </View>
+                      );
+                    }
+                    
+                    // Calcular estadísticas de asistencia
+                    const totalClases = courseAttendances.length;
+                    const presentes = courseAttendances.filter(att => att.estado === 'Presente').length;
+                    const tardanzas = courseAttendances.filter(att => att.estado === 'Tardanza').length;
+                    const ausentes = courseAttendances.filter(att => att.estado === 'Ausente').length;
+                    const porcentajeAsistencia = Math.round((presentes / totalClases) * 100);
+                    
+                    return (
+                      <View>
+                        {/* Resumen de asistencias */}
+                        <View style={styles.attendanceSummary}>
+                          <Text style={styles.summaryTitle}>Resumen de Asistencias</Text>
+                          <View style={styles.summaryGrid}>
+                            <View style={styles.summaryItem}>
+                              <CheckCircle size={16} color="#228B22" />
+                              <Text style={styles.summaryText}>Presente: {presentes}</Text>
+                            </View>
+                            <View style={styles.summaryItem}>
+                              <Clock size={16} color="#DAA520" />
+                              <Text style={styles.summaryText}>Tardanza: {tardanzas}</Text>
+                            </View>
+                            <View style={styles.summaryItem}>
+                              <XCircle size={16} color="#DC143C" />
+                              <Text style={styles.summaryText}>Ausente: {ausentes}</Text>
+                            </View>
+                            <View style={styles.summaryItem}>
+                              <Text style={[styles.summaryText, styles.totalText]}>
+                                Total: {totalClases} clases
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.percentageContainer}>
+                            <Text style={[
+                              styles.percentageText,
+                              { color: porcentajeAsistencia >= 70 ? '#228B22' : '#DC143C' }
+                            ]}>
+                              Asistencia: {porcentajeAsistencia}%
+                            </Text>
+                          </View>
+                        </View>
+                        
+                        {/* Lista de asistencias recientes */}
+                        <Text style={styles.recentTitle}>Últimas Asistencias:</Text>
+                        <View style={styles.attendanceList}>
+                          {courseAttendances.slice(-5).reverse().map((attendance, index) => (
+                            <View key={index} style={styles.attendanceItem}>
+                              <View style={styles.attendanceDate}>
+                                <Text style={styles.attendanceDateText}>
+                                  {new Date(attendance.fecha).toLocaleDateString('es-ES', {
+                                    weekday: 'short',
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </Text>
+                              </View>
+                              <View style={styles.attendanceStatus}>
+                                {getAttendanceIcon(attendance.estado)}
+                                <Text style={[
+                                  styles.attendanceStatusText,
+                                  { 
+                                    color: attendance.estado === 'Presente' ? '#228B22' : 
+                                           attendance.estado === 'Tardanza' ? '#DAA520' : '#DC143C' 
+                                  }
+                                ]}>
+                                  {attendance.estado}
+                                </Text>
+                              </View>
+                              {attendance.observacion && (
+                                <Text style={styles.attendanceObservation}>
+                                  {attendance.observacion}
+                                </Text>
+                              )}
+                            </View>
+                          ))}
+                          {courseAttendances.length > 5 && (
+                            <Text style={styles.moreAttendances}>
+                              ... y {courseAttendances.length - 5} registros más
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </View>
               </Card>
             ))
@@ -523,6 +661,59 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
   },
+  attendanceSummary: {
+    backgroundColor: '#F8F8FF',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E6E6FA',
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B4513',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    marginBottom: 8,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: '#8B4513',
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  totalText: {
+    fontWeight: '600',
+    color: '#D2691E',
+  },
+  percentageContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E6E6FA',
+  },
+  percentageText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  recentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#D2691E',
+    marginBottom: 8,
+  },
   legendContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -535,6 +726,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8B4513',
     marginLeft: 4,
+  },
+  attendanceList: {
+    marginTop: 8,
+  },
+  attendanceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+    backgroundColor: '#FFF8DC',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DEB887',
+  },
+  attendanceDate: {
+    flex: 1,
+  },
+  attendanceDateText: {
+    fontSize: 14,
+    color: '#8B4513',
+    fontWeight: '500',
+  },
+  attendanceStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  attendanceStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  attendanceObservation: {
+    fontSize: 12,
+    color: '#A0522D',
+    fontStyle: 'italic',
+    flex: 2,
+    textAlign: 'right',
+  },
+  moreAttendances: {
+    fontSize: 12,
+    color: '#A0522D',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   formCard: {
     margin: 20,

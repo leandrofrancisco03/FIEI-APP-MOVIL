@@ -126,16 +126,6 @@ export default function Login() {
               Después del registro, debes verificar tu correo electrónico antes de poder iniciar sesión.
             </Text>
           </View>
-          
-          <View style={styles.demoContainer}>
-            <Text style={styles.demoTitle}>Cuentas de Demo:</Text>
-            <Text style={styles.demoText}>
-              Estudiante: estudiante@unfv.edu.pe / 123456
-            </Text>
-            <Text style={styles.demoText}>
-              Profesor: profesor@unfv.edu.pe / 123456
-            </Text>
-          </View>
         </Card>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -209,24 +199,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3B82F6',
     lineHeight: 16,
-  },
-  demoContainer: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: '#FFF8DC',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DEB887',
-  },
-  demoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8B4513',
-    marginBottom: 8,
-  },
-  demoText: {
-    fontSize: 12,
-    color: '#A0522D',
-    marginBottom: 4,
   },
 });

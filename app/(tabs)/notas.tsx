@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   ScrollView, 
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
@@ -13,7 +14,7 @@ import { Card } from '@/components/Card';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { SemesterPicker } from '@/components/SemesterPicker';
-import { ClipboardCheck, Search, GraduationCap, Award } from 'lucide-react-native';
+import { ClipboardCheck, Search, Award } from 'lucide-react-native';
 
 interface GradeForm {
   semestre: string;
@@ -23,13 +24,20 @@ interface GradeForm {
   nota: string;
   observaciones: string;
 }
+// Función helper para alertas
+const showAlert = (title: string, message?: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(message ? `${title}: ${message}` : title);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 
 export default function Notas() {
   const { user } = useAuth();
   const { 
     getProfessorCourses, 
     getSemesters,
-    searchStudentByCode,
     insertGrade,
     getStudentGrades,
     isLoading
@@ -44,7 +52,6 @@ export default function Notas() {
     observaciones: ''
   });
   
-  const [studentInfo, setStudentInfo] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState('');
   const [grades, setGrades] = useState([]);
@@ -72,7 +79,7 @@ export default function Notas() {
       console.error('Error loading grades data:', error);
     }
   };
-
+  
   if (!user) return null;
 
   const isStudent = user.rol === 'estudiante';
@@ -193,41 +200,33 @@ export default function Notas() {
     }
   };
 
-  const searchStudent = async () => {
-    if (!form.codigo_estudiante.trim()) {
-      setStudentInfo(null);
-      return;
-    }
-    
-    try {
-      const student = await searchStudentByCode(form.codigo_estudiante);
-      if (student) {
-        setStudentInfo(student);
-      } else {
-        setStudentInfo(null);
-        Alert.alert('Error', 'No se encontró un estudiante con ese código');
-      }
-    } catch (error) {
-      console.error('Error searching student:', error);
-      setStudentInfo(null);
-      Alert.alert('Error', 'Error al buscar el estudiante');
-    }
-  };
+
 
   const handleSubmit = async () => {
-    if (!form.codigo_curso || !form.codigo_estudiante || !form.nota) {
-      Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
+    // Validaciones básicas
+    if (!form.semestre) {
+      showAlert('Error', 'Por favor selecciona un semestre');
+      return;
+    }
+
+    if (!form.codigo_curso) {
+      showAlert('Error', 'Por favor selecciona un curso');
+      return;
+    }
+
+    if (!form.codigo_estudiante.trim()) {
+      showAlert('Error', 'Por favor ingresa el código del estudiante');
+      return;
+    }
+
+    if (!form.nota.trim()) {
+      showAlert('Error', 'Por favor ingresa la nota');
       return;
     }
 
     const nota = parseFloat(form.nota);
     if (isNaN(nota) || nota < 0 || nota > 20) {
-      Alert.alert('Error', 'La nota debe ser un número entre 0 y 20');
-      return;
-    }
-
-    if (!studentInfo) {
-      Alert.alert('Error', 'Busca y verifica el estudiante antes de continuar');
+      showAlert('Error', 'La nota debe ser un número entre 0 y 20');
       return;
     }
 
@@ -236,33 +235,35 @@ export default function Notas() {
     try {
       const success = await insertGrade({
         codigo_curso: form.codigo_curso,
-        codigo_estudiante: form.codigo_estudiante,
+        codigo_estudiante: form.codigo_estudiante.trim(),
         tipo_nota: form.tipo_nota,
         nota: nota,
-        observaciones: form.observaciones,
+        observaciones: form.observaciones.trim(),
         id_profesor: user.id
       });
 
       if (success) {
-        Alert.alert('Éxito', 'Nota registrada correctamente');
+        showAlert('Éxito', 'Nota registrada correctamente');
+        // Limpiar formulario pero mantener semestre y curso
         setForm({
           semestre: form.semestre,
-          codigo_curso: '',
+          codigo_curso: form.codigo_curso,
           codigo_estudiante: '',
           tipo_nota: 'parcial',
           nota: '',
           observaciones: ''
         });
-        setStudentInfo(null);
       } else {
-        Alert.alert('Error', 'No se pudo registrar la nota');
+        showAlert('Error', 'No se pudo registrar la nota. Verifica que el estudiante esté matriculado en el curso.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error al registrar la nota');
+      console.error('Error registering grade:', error);
+      showAlert('Error', 'Ocurrió un error al registrar la nota');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <ScrollView style={styles.container}>
@@ -322,23 +323,7 @@ export default function Notas() {
           value={form.codigo_estudiante}
           onChangeText={(text) => setForm({...form, codigo_estudiante: text})}
           placeholder="Ej: E2021001"
-          onEndEditing={searchStudent}
         />
-
-        {studentInfo && (
-          <Card style={styles.studentInfo}>
-            <View style={styles.studentHeader}>
-              <GraduationCap size={20} color="#228B22" />
-              <Text style={styles.studentTitle}>Estudiante Encontrado</Text>
-            </View>
-            <Text style={styles.studentName}>
-              {studentInfo.usuarios?.nombres} {studentInfo.usuarios?.apellidos}
-            </Text>
-            <Text style={styles.studentDetails}>
-              Código: {studentInfo.codigo} • Escuela: {studentInfo.escuelas?.nombre}
-            </Text>
-          </Card>
-        )}
 
         <Text style={styles.sectionTitle}>Tipo de Nota</Text>
         <View style={styles.gradeTypeContainer}>
@@ -535,33 +520,6 @@ const styles = StyleSheet.create({
   courseOptionCode: {
     fontSize: 14,
     color: '#A0522D',
-  },
-  studentInfo: {
-    backgroundColor: '#F0FFF0',
-    borderWidth: 1,
-    borderColor: '#90EE90',
-    marginBottom: 16,
-  },
-  studentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  studentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#228B22',
-    marginLeft: 8,
-  },
-  studentName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#006400',
-    marginBottom: 4,
-  },
-  studentDetails: {
-    fontSize: 14,
-    color: '#228B22',
   },
   gradeTypeContainer: {
     marginBottom: 16,

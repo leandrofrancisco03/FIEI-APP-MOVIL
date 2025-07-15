@@ -319,6 +319,47 @@ export function useSupabaseData() {
     }
   };
 
+  const getStudentAttendances = async (userId: string, semester: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('asistencias')
+        .select(`
+          id,
+          fecha,
+          estado,
+          observacion,
+          matriculas (
+            secciones (
+              codigo_curso,
+              periodo_academico,
+              cursos (
+                codigo,
+                nombre
+              )
+            )
+          )
+        `)
+        .eq('matriculas.id_estudiante', userId)
+        .eq('matriculas.secciones.periodo_academico', semester)
+        .order('fecha', { ascending: false });
+
+      if (error) throw error;
+      
+      // Transformar los datos para que sean más fáciles de usar
+      return data?.map(attendance => ({
+        id: attendance.id,
+        fecha: attendance.fecha,
+        estado: attendance.estado,
+        observacion: attendance.observacion,
+        codigo_curso: attendance.matriculas?.secciones?.codigo_curso,
+        curso_nombre: attendance.matriculas?.secciones?.cursos?.nombre
+      })) || [];
+    } catch (error) {
+      console.error('Error fetching student attendances:', error);
+      return [];
+    }
+  };
+
   const getEnrolledStudents = async (seccionId: number) => {
     try {
       const { data, error } = await supabase
@@ -356,6 +397,7 @@ export function useSupabaseData() {
     searchStudentByCode,
     insertGrade,
     registerAttendance,
+    getStudentAttendances,
     getEnrolledStudents
   };
 }
