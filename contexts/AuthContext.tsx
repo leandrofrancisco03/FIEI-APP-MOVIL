@@ -119,6 +119,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('User data loaded:', userData);
+      console.log('🔍 DEBUG ROL - Valor exacto del rol:', userData.rol);
+      console.log('🔍 DEBUG ROL - Tipo del rol:', typeof userData.rol);
+      console.log('🔍 DEBUG ROL - Longitud del rol:', userData.rol?.length);
+      console.log('🔍 DEBUG ROL - Bytes del rol:', [...(userData.rol || '')].map(c => c.charCodeAt(0)));
+      console.log('🔍 DEBUG ROL - JSON del rol:', JSON.stringify(userData.rol));
 
       let authUser: AuthUser = {
         id: userData.id,
