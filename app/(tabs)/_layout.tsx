@@ -26,6 +26,8 @@ export default function TabLayout() {
             paddingTop: 8,
             paddingBottom: 8,
             height: 75,
+            // Cambiar shadow* por boxShadow para web
+            boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -102,6 +104,8 @@ export default function TabLayout() {
           paddingTop: 8,
           paddingBottom: 8,
           height: 75,
+          // Cambiar shadow* por boxShadow para web
+          boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
         },
         tabBarLabelStyle: {
           fontSize: 12,
