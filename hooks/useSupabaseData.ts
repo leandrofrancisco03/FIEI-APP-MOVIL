@@ -387,6 +387,131 @@ export function useSupabaseData() {
     }
   };
 
+  const sendChatMessage = async (message: string, userRole: string, userId: string, userEmail: string) => {
+    try {
+      setIsLoading(true);
+      
+      console.log('🚀 Enviando mensaje al webhook:', {
+        message,
+        userId,
+        userRole,
+        userEmail,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Crear un timeout personalizado
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.log('⏰ Timeout: Cancelando petición después de 30 segundos');
+      }, 30000); // 30 segundos timeout
+      
+      const response = await fetch('https://paneln8n.sastreriamagda.com/webhook/33cd0807-e45d-4a4e-a7a7-a18e807b3ad3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          userId,
+          userRole,
+          userEmail,
+          timestamp: new Date().toISOString(),
+        }),
+        signal: controller.signal, // Para poder cancelar la petición
+      });
+
+      // Limpiar el timeout si la petición fue exitosa
+      clearTimeout(timeoutId);
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+      }
+
+      // Verificar si hay contenido en la respuesta
+      const contentType = response.headers.get('content-type');
+      console.log('📡 Content-Type:', contentType);
+      
+      if (!contentType || contentType.indexOf('application/json') === -1) {
+        console.log('⚠️ Respuesta no es JSON, intentando leer como texto');
+        const textResponse = await response.text();
+        console.log('📦 Respuesta como texto:', textResponse);
+        
+        if (!textResponse || textResponse.trim() === '') {
+          throw new Error('Respuesta vacía del servidor');
+        }
+        
+        return {
+          success: true,
+          response: textResponse,
+        };
+      }
+
+      const data = await response.json();
+      console.log('📦 Respuesta completa del webhook:', data);
+      
+      // Manejar diferentes formatos de respuesta
+      let responseText = 'Respuesta recibida del asistente.';
+      
+      if (Array.isArray(data) && data.length > 0 && data[0].output) {
+        // Formato: [{"output": "texto"}]
+        responseText = data[0].output;
+        console.log('✅ Usando formato array[0].output:', responseText);
+      } else if (data.output) {
+        // Formato: {"output": "texto"}
+        responseText = data.output;
+        console.log('✅ Usando formato data.output:', responseText);
+      } else if (data.response) {
+        // Formato: {"response": "texto"}
+        responseText = data.response;
+        console.log('✅ Usando formato data.response:', responseText);
+      } else if (data.message) {
+        // Formato: {"message": "texto"}
+        responseText = data.message;
+        console.log('✅ Usando formato data.message:', responseText);
+      } else if (typeof data === 'string') {
+        // Formato: "texto"
+        responseText = data;
+        console.log('✅ Usando formato string directo:', responseText);
+      } else {
+        console.log('⚠️ Formato no reconocido, usando respuesta por defecto');
+        console.log('📦 Estructura completa de data:', JSON.stringify(data, null, 2));
+      }
+      
+      return {
+        success: true,
+        response: responseText,
+      };
+    } catch (error: any) {
+      console.error('❌ Error sending chat message:', error);
+      
+      if (error?.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'La petición ha tardado demasiado tiempo. El servidor puede estar ocupado, inténtalo de nuevo.',
+        };
+      }
+      
+      if (error?.message && error.message.indexOf('fetch') !== -1) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.',
+        };
+      }
+      
+      return {
+        success: false,
+        error: `Error al enviar el mensaje: ${error?.message || 'Error desconocido'}. Por favor, inténtalo de nuevo.`,
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     getSemesters,
@@ -398,6 +523,7 @@ export function useSupabaseData() {
     insertGrade,
     registerAttendance,
     getStudentAttendances,
-    getEnrolledStudents
+    getEnrolledStudents,
+    sendChatMessage
   };
 }

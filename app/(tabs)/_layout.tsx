@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { House, ClipboardList, User, FileText } from 'lucide-react-native';
+import { House, ClipboardList, User, FileText, MessageCircle } from 'lucide-react-native';
 
 export default function TabLayout() {
   const { user } = useAuth();
@@ -60,6 +60,15 @@ export default function TabLayout() {
             title: 'Asistencias',
             tabBarIcon: ({ color, focused }) => (
               <ClipboardList size={focused ? 28 : 24} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: 'Chat',
+            tabBarIcon: ({ color, focused }) => (
+              <MessageCircle size={focused ? 28 : 24} color={color} />
             ),
           }}
         />
@@ -160,6 +169,15 @@ export default function TabLayout() {
           title: 'Asistencias',
           tabBarIcon: ({ color, focused }) => (
             <ClipboardList size={focused ? 28 : 24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <MessageCircle size={focused ? 28 : 24} color={color} />
           ),
         }}
       />
