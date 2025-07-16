@@ -22,6 +22,18 @@ export default function Buscar() {
     isLoading
   } = useSupabaseData();
   
+  // Protección: Solo estudiantes pueden acceder a esta página
+  if (!user || user.rol !== 'estudiante') {
+    return (
+      <View style={styles.accessDenied}>
+        <Text style={styles.accessDeniedTitle}>Acceso Restringido</Text>
+        <Text style={styles.accessDeniedText}>
+          Esta sección está disponible únicamente para estudiantes.
+        </Text>
+      </View>
+    );
+  }
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('2025-1');
   const [searchResults, setSearchResults] = useState([]);
@@ -64,8 +76,6 @@ export default function Buscar() {
     }
   };
   
-  if (!user || user.rol !== 'estudiante') return null;
-
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -363,5 +373,25 @@ const styles = StyleSheet.create({
     color: '#A0522D',
     fontStyle: 'italic',
     padding: 20,
+  },
+  accessDenied: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FEDEBB',
+    padding: 40,
+  },
+  accessDeniedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#8B4513',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  accessDeniedText: {
+    fontSize: 16,
+    color: '#A0522D',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });

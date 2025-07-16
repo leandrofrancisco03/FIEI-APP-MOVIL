@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Chrome as Home, Search, BookOpen, Users, ClipboardList, User, GraduationCap, FileText } from 'lucide-react-native';
+import { House, Search, BookOpen, Users, ClipboardList, User, GraduationCap, FileText } from 'lucide-react-native';
 import { Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -9,10 +9,29 @@ const { width } = Dimensions.get('window');
 export default function TabLayout() {
   const { user } = useAuth();
   
+  // Debug logs para verificar el usuario y rol
+  console.log('TabLayout - User:', user);
+  console.log('TabLayout - User rol:', user?.rol);
+  
   if (!user) return null;
 
-  const isStudent = user.rol === 'estudiante';
-  const isProfesor = user.rol === 'profesor';
+  const isStudent = user.rol?.trim().toLowerCase() === 'estudiante';
+  const isProfesor = user.rol?.trim().toLowerCase() === 'profesor';
+  
+  // Debug logs para verificar las condiciones
+  console.log('TabLayout - isStudent:', isStudent);
+  console.log('TabLayout - isProfesor:', isProfesor);
+  console.log('TabLayout - rol original:', `"${user.rol}"`);
+  console.log('TabLayout - rol trimmed:', `"${user.rol?.trim()}"`);
+  
+  // Si sigues viendo las pestañas, significa que isStudent está siendo true
+  if (isStudent) {
+    console.log('🟢 Mostrando pestañas de ESTUDIANTE (Cursos y Buscar)');
+  } else if (isProfesor) {
+    console.log('🔵 Mostrando pestañas de PROFESOR (sin Cursos ni Buscar)');
+  } else {
+    console.log('⚠️ Rol no reconocido:', user.rol);
+  }
 
   // Calculate responsive values
   const isSmallScreen = width < 400;
@@ -55,7 +74,7 @@ export default function TabLayout() {
         options={{
           title: 'Inicio',
           tabBarIcon: ({ size, color, focused }) => (
-            <Home 
+            <House 
               size={focused ? activeIconSize : iconSize} 
               color={color} 
               strokeWidth={focused ? 2.5 : 2}
@@ -64,7 +83,7 @@ export default function TabLayout() {
         }}
       />
       
-      {isStudent && (
+      {(isStudent && user.rol?.trim().toLowerCase() === 'estudiante') && (
         <>
           <Tabs.Screen
             name="cursos"
@@ -109,21 +128,19 @@ export default function TabLayout() {
         }}
       />
       
-      {isProfesor && (
-        <Tabs.Screen
-          name="asistencias"
-          options={{
-            title: isSmallScreen ? 'Asist.' : 'Asistencias',
-            tabBarIcon: ({ size, color, focused }) => (
-              <ClipboardList 
-                size={focused ? activeIconSize : iconSize} 
-                color={color} 
-                strokeWidth={focused ? 2.5 : 2}
-              />
-            ),
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="asistencias"
+        options={{
+          title: isSmallScreen ? 'Asist.' : 'Asistencias',
+          tabBarIcon: ({ size, color, focused }) => (
+            <ClipboardList 
+              size={focused ? activeIconSize : iconSize} 
+              color={color} 
+              strokeWidth={focused ? 2.5 : 2}
+            />
+          ),
+        }}
+      />
       
       <Tabs.Screen
         name="perfil"
