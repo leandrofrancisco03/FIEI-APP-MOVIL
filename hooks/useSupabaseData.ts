@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { APP_CONFIG } from '@/lib/config';
 
 export function useSupabaseData() {
   const { user } = useAuth();
@@ -391,34 +392,35 @@ export function useSupabaseData() {
     try {
       setIsLoading(true);
       
-      console.log('🚀 Enviando mensaje al webhook:', {
+      // Obtener el nombre del usuario desde el contexto de auth
+      const userName = user?.nombres ? `${user.nombres} ${user.apellidos || ''}`.trim() : 'Usuario';
+      
+      const payload = {
         message,
         userId,
         userRole,
         userEmail,
+        userName,
         timestamp: new Date().toISOString(),
-      });
+      };
+      
+      console.log('🚀 Enviando mensaje al webhook:', payload);
+      console.log('🔗 URL del webhook:', APP_CONFIG.WEBHOOK_URL);
       
       // Crear un timeout personalizado
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
         console.log('⏰ Timeout: Cancelando petición después de 30 segundos');
-      }, 30000); // 30 segundos timeout
+      }, APP_CONFIG.CHAT_CONFIG.TIMEOUT_MS); // Usar timeout desde config
       
-      const response = await fetch('https://paneln8n.sastreriamagda.com/webhook/33cd0807-e45d-4a4e-a7a7-a18e807b3ad3', {
+      const response = await fetch(APP_CONFIG.WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          message,
-          userId,
-          userRole,
-          userEmail,
-          timestamp: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
         signal: controller.signal, // Para poder cancelar la petición
       });
 
