@@ -8,10 +8,10 @@ import {
   Platform,
   Pressable,
   KeyboardAvoidingView,
+  TextInput,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Send, MessageCircle, Bot, User } from 'lucide-react-native';
@@ -214,7 +214,7 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}
@@ -297,7 +297,7 @@ export default function ChatScreen() {
       {/* Input */}
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
-          <Input
+          <TextInput
             placeholder="Escribe tu mensaje..."
             value={inputText}
             onChangeText={setInputText}
@@ -442,26 +442,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#DEB887',
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    padding: Platform.OS === 'web' ? 20 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : Platform.OS === 'web' ? 20 : 16,
+    width: '100%',
+    maxWidth: undefined,
+    alignSelf: 'stretch',
+    flexShrink: 0,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    width: '100%',
+    flex: 1,
+    gap: 20,
   },
   textInput: {
     flex: 1,
-    maxHeight: 100,
+    width: '100%',
+    maxHeight: Platform.OS === 'web' ? 300 : 200,
+    minHeight: Platform.OS === 'web' ? 140 : 120,
+    fontSize: Platform.OS === 'web' ? 25 : 15,
+    paddingVertical: Platform.OS === 'web' ? 28 : 24,
+    paddingHorizontal: Platform.OS === 'web' ? 36 : 28,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Platform.OS === 'web' ? 16 : 12,
+    borderWidth: 3,
+    borderColor: '#D2691E',
+    color: '#333333',
+    lineHeight: Platform.OS === 'web' ? 40 : 36,
+    textAlignVertical: 'top',
+    alignSelf: 'stretch',
   },
   sendButton: {
     backgroundColor: '#D2691E',
-    width: 44,
-    height: 44,
+    width: Platform.OS === 'web' ? 70 : 50,
+    height: Platform.OS === 'web' ? 70 : 50,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 35,
+    marginLeft: 8,  
+    marginRight: 24,
   },
   sendButtonDisabled: {
     backgroundColor: '#E0E0E0',
